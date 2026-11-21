@@ -25,9 +25,14 @@ finished work.
   20 GB), route via LiteLLM. Status: Not Started.
 - 0.4 Repo renamed to Probatum; README, description, 7 topics, default branch set. Status: Done.
   Open: package identity in `pyproject.toml` still `cai-framework`.
-- 0.5 Map and document the exact tool-call trace shape in `cai.sdk.agents`. Detail:
-  `docs/research/`.
-- Release gate 0.1.0: CAI runs on both backends; trace shape documented; ADR-0001 Accepted.
+- 0.5 Map and document the exact tool-call trace shape in `cai.sdk.agents`. Status: Done. Capture via
+  `on_tool_end` (untruncated) into a ledger on `RunContextWrapper.context`; guardrail reads it. Detail:
+  `docs/research/trace-shape.md`.
+- 0.6 Provenance gate semantics decided (ADR-0002): exact-substring match, flags first, configurable
+  default reject, lenient ordering. Status: Done. Detail:
+  `docs/adr/0002-provenance-gate-semantics.md`.
+- Release gate 0.1.0: CAI runs on both backends; trace shape documented; ADR-0001 Accepted. Open:
+  local Ollama backend (0.3) not yet installed.
 
 ## Phase 1 — Trace-provenance gate (release 0.2.0)
 
