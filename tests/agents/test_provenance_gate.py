@@ -180,3 +180,21 @@ def test_match_path_contains_no_llm():
     assert "Runner" not in inspect.getsource(provenance)
     gate_names = set(provenance_guardrail.guardrail_function.__code__.co_names)
     assert gate_names <= {"judge", "ledger_of", "log_verdict", "GuardrailFunctionOutput", "as_info", "tripwire"}
+
+
+@pytest.mark.parametrize(
+    "guardrails, gate, expected_output",
+    [
+        ("false", "false", []),
+        ("false", "true", ["provenance_gate"]),
+        ("true", "false", ["command_execution_guard"]),
+        ("true", "true", ["command_execution_guard", "provenance_gate"]),
+    ],
+)
+def test_toggle_controls_provenance_gate_independently(monkeypatch, guardrails, gate, expected_output):
+    from cai.agents.guardrails import get_security_guardrails
+
+    monkeypatch.setenv("CAI_GUARDRAILS", guardrails)
+    monkeypatch.setenv("CAI_PROVENANCE_GATE", gate)
+    _, output_guardrails = get_security_guardrails()
+    assert [g.get_name() for g in output_guardrails] == expected_output

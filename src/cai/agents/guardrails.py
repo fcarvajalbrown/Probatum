@@ -514,6 +514,10 @@ async def command_execution_guardrail(
     )
 
 
+def provenance_gate_enabled() -> bool:
+    return os.getenv("CAI_PROVENANCE_GATE", "false").strip().lower() in ("true", "1", "yes", "on")
+
+
 @output_guardrail(name="provenance_gate")
 async def provenance_guardrail(
     ctx: RunContextWrapper,
@@ -542,9 +546,11 @@ def get_security_guardrails():
     # Check if guardrails are disabled via environment variable
     guardrails_enabled = os.getenv("CAI_GUARDRAILS", "false").lower() != "false"
     
+    provenance = [provenance_guardrail] if provenance_gate_enabled() else []
+
     if not guardrails_enabled:
         # Return empty lists to disable all guardrails
-        return [], []
+        return [], provenance
     
     # Return the configured guardrails
-    return [prompt_injection_guardrail], [command_execution_guardrail]
+    return [prompt_injection_guardrail], [command_execution_guardrail, *provenance]
