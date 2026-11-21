@@ -7,7 +7,7 @@ finished work.
 ## Open items
 
 - Phase 0.3 — Install Ollama, pull `qwen2.5-coder:7b`, route via LiteLLM. Status: Not Started.
-- Phase 1.2 — Wire hook, ledger and gate into the red-team run path. Status: Not Started.
+- Phase 1.3 — Oracle cross-check of the gate against CAIBench ground-truth flags. Status: Not Started.
 - Phase 2.1 — Reproducible Cybench before/after harness. Status: Not Started.
 - Phase 3.1 — Measurement runs, both backends. Status: Not Started.
 - Phase 4.1 — Preprint writeup. Status: Not Started.
@@ -50,7 +50,27 @@ finished work.
   `docs/research/trace-shape.md`. Open for 1.2: agents call `get_security_guardrails()` at import, so the
   env vars must be set before import, and no run path yet passes `ProvenanceHooks()` and a
   `ProvenanceContext` to `Runner.run`, which is why the gate defaults off.
-- 1.2 Wire the gate into the red-team / flag-discrimination path per ADR-0001.
+- 1.2 Wire the gate into the red-team run path per ADR-0001. Status: Done. `provenance_run_kwargs()` in
+  `src/cai/agents/provenance.py` returns `hooks` and a fresh `ProvenanceContext` per run when
+  `CAI_PROVENANCE_GATE` is on, merging existing hooks through `CompositeRunHooks`. It is passed at every
+  `Runner.run` / `run_streamed` in `src/cai/cli_headless.py` (streamed, non-streamed, both parallel paths)
+  and in `src/cai/parallel_worker.py`. `get_security_guardrails()` now always attaches the provenance
+  guardrail, which reads the toggle at run time (verdict `disabled` when off), so import order no longer
+  matters. The streamed path records the untruncated result through the same `on_tool_end` (see
+  `docs/research/trace-shape.md`). Done check: `tests/agents/test_provenance_wiring.py`, 10 tests, runs the
+  real `redteam_agent` with a fake model through `cli_headless._run_non_streamed` and `_run_streamed`: a
+  model-only flag is rejected, and a tool-backed flag in the truncated middle of a 14000-char dump is
+  accepted. Reverting the CLI wiring fails 3 of the 4 CLI cases. Findings: (a) the streamed CLI swallowed
+  `OutputGuardrailTripwireTriggered` in a broad `except Exception` and logged it as a streaming error; it
+  now re-raises to the guardrail warning. (b) In streamed mode the final message is printed before the
+  output guardrail runs, so a rejected flag still shows on screen; Phase 2 must score from the verdict and
+  tripwire, never from console text. (c) The ledger lives for one `Runner.run`: in the interactive REPL each
+  turn is a new run, so a flag a tool printed in an earlier turn and claimed in a later one is rejected.
+  One-shot benchmark runs are unaffected. (d) Not wired, so they fail closed with the gate on: TUI
+  (`src/cai/tui/`), API (`src/cai/api/`), the REPL monoliths, `approach_contest`. (e) `src/cai/caibench/`
+  only manages CTF containers; benchmark agent runs go through `cli_headless`. Pre-existing failures,
+  unchanged by this work: `tests/agents/test_agent_inference.py` (live API, 401) and 4 tests in
+  `tests/cli/test_cli_streaming.py`.
 - 1.3 Oracle cross-check against CAIBench `ctf.py` ground-truth flags: measure the gate's own
   precision and recall on accept/reject.
 - Release gate 0.2.0: gate runs end to end on one Cybench challenge; fabricated flag rejected,

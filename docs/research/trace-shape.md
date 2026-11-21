@@ -76,3 +76,13 @@ Flow:
 any tool output). It is the hook for the strict CTF-ABACUS rule (ADR-0002): a proof is a real solve
 only if a target-side exploitation step precedes its first appearance. That needs a classifier for
 "exploitation step" and is a later phase.
+
+## Streamed runs
+
+`Runner.run_streamed` takes the same `hooks` and `context`. `_run_streamed_impl` processes each turn
+through `_get_single_step_result_from_response`, the same function the non-streamed path uses, so tools
+run in `RunImpl.execute_tools_and_side_effects` and `on_tool_end` receives the untruncated result in both
+modes. Verified by `test_streamed_run_records_untruncated_tool_result` in
+`tests/agents/test_provenance_wiring.py`. Output guardrails run as `_output_guardrails_task` once the final
+output is known; a tripwire surfaces from `stream_events()` through `RunResultStreaming._check_errors`,
+after the final message deltas have already reached the consumer.
