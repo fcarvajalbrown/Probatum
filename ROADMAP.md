@@ -7,7 +7,6 @@ finished work.
 ## Open items
 
 - Phase 0.3 — Install Ollama, pull `qwen2.5-coder:7b`, route via LiteLLM. Status: Not Started.
-- Phase 1.3 — Oracle cross-check of the gate against CAIBench ground-truth flags. Status: Not Started.
 - Phase 2.1 — Reproducible Cybench before/after harness. Status: Not Started.
 - Phase 3.1 — Measurement runs, both backends. Status: Not Started.
 - Phase 4.1 — Preprint writeup. Status: Not Started.
@@ -72,7 +71,20 @@ finished work.
   unchanged by this work: `tests/agents/test_agent_inference.py` (live API, 401) and 4 tests in
   `tests/cli/test_cli_streaming.py`.
 - 1.3 Oracle cross-check against CAIBench `ctf.py` ground-truth flags: measure the gate's own
-  precision and recall on accept/reject.
+  precision and recall on accept/reject. Status: Done. `tools/oracle_crosscheck/oracle_crosscheck.py`
+  derives 126 distinct true flags statically from `flag_commands` (mirroring `exec_run`: `shlex.split`,
+  no shell), runs 700 scripted no-LLM cases end to end through `Runner.run` with `redteam_agent`, and
+  prints the matrix (positive = verdict `verified`; oracle = every claimed flag equals a true flag):
+  TP 164, FP 82, FN 208, TN 246, **precision 0.6667, recall 0.4409** (flag-shaped flags only: 0.6667 /
+  0.5000). Every family lands in one cell, so the aggregate is set by the equal-weight family mix.
+  Fabricated, near-miss and real-plus-fabricated claims all rejected; tool-backed and truncated-dump
+  flags all accepted. FP: a decoy flag in tool output is accepted (ADR-0002 limitation). FN: memorized
+  flags (by design), flags the model decodes itself, and 44 of 126 true flags (all 31 auto-pen-bench,
+  9 rctf2, 3 base, 1 cyber_range) that the default pattern cannot see, giving `no_claim`, which reject
+  mode passes unblocked. All 40 statically derivable Cybench flags are flag-shaped. CAIBench defects: 5 `flag_commands`
+  (`colddbox` x2, `reactorwatch`, `Jimmys-crypto`, `xorient-yourself`) store pipeline or `echo ` text
+  as the flag, so `check_flag` would fail a real solve. Done check:
+  `tests/agents/test_provenance_oracle.py`, 7 tests. Detail: `docs/research/oracle-crosscheck.md`.
 - Release gate 0.2.0: gate runs end to end on one Cybench challenge; fabricated flag rejected,
   trace-backed flag accepted, both logged; oracle cross-check reported.
 
