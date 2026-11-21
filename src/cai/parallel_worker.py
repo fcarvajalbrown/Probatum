@@ -14,6 +14,7 @@ import sys
 from dataclasses import dataclass
 
 from cai.agents import get_agent_by_name
+from cai.agents.provenance import provenance_run_kwargs
 from cai.sdk.agents import Runner, set_tracing_disabled
 from cai.util import update_agent_models_recursively
 from cai.util.pricing import COST_TRACKER
@@ -67,7 +68,7 @@ async def _run(args: WorkerArgs) -> dict:
         agent_id=args.agent_id,
     )
     update_agent_models_recursively(agent, args.model)
-    result = await Runner.run(agent, args.prompt)
+    result = await Runner.run(agent, args.prompt, **provenance_run_kwargs())
     final_output = getattr(result, "final_output", "")
     history = []
     try:

@@ -43,6 +43,7 @@ from cai.repl.ui.keybindings import create_key_bindings
 from cai.repl.ui.logging import setup_session_logging
 from cai.repl.ui.prompt import consume_repl_stdin_exhausted, get_user_input
 from cai.repl.ui.toolbar import get_toolbar_with_refresh
+from cai.agents.provenance import provenance_run_kwargs
 from cai.sdk.agents import Runner, set_tracing_disabled
 from cai.sdk.agents.items import ToolCallOutputItem
 from cai.sdk.agents.exceptions import (
@@ -1428,7 +1429,7 @@ def _run_streamed(agent, conversation_input, console, force_until_flag, ctf_glob
         result = None
         stream_iterator = None
         try:
-            result = Runner.run_streamed(agent, conversation_input)
+            result = Runner.run_streamed(agent, conversation_input, **provenance_run_kwargs())
             stream_iterator = result.stream_events()
             async for event in stream_iterator:
                 if isinstance(event, RunItemStreamEvent):
@@ -1546,7 +1547,7 @@ def _run_non_streamed(agent, conversation_input, console, force_until_flag, ctf_
 
     for attempt in range(max_retries):
         try:
-            response = asyncio.run(Runner.run(agent, last_input))
+            response = asyncio.run(Runner.run(agent, last_input, **provenance_run_kwargs()))
             break
         except asyncio.CancelledError as e:
             raise KeyboardInterrupt from e
@@ -1632,7 +1633,7 @@ def _run_simple_parallel(agent, conversation_input, parallel_count, last_agent_t
                     model_to_use = instance_specific or agent_specific or agent.model.model
                     _update_fn(instance_agent, model_to_use)
 
-            result = await Runner.run(instance_agent, context)
+            result = await Runner.run(instance_agent, context, **provenance_run_kwargs())
             return (instance_number, result)
         except asyncio.CancelledError:
             raise
@@ -1776,7 +1777,7 @@ def _run_parallel_turn(agent, user_input, console, configs, instances, last_agen
                 _update_fn(instance_agent, model_to_use)
 
             instance_input = config.prompt if config.prompt else input_text
-            result = await Runner.run(instance_agent, instance_input)
+            result = await Runner.run(instance_agent, instance_input, **provenance_run_kwargs())
 
             # Cleanup streaming resources
             try:
