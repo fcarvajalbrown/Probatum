@@ -1,7 +1,13 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
-from typing import NamedTuple
+from typing import Any, NamedTuple
+
+from cai.sdk.agents import Agent, RunContextWrapper, RunHooks
+from cai.sdk.agents.tool import Tool
+
+logger = logging.getLogger("cai.provenance")
 
 
 class ToolEvent(NamedTuple):
@@ -21,3 +27,30 @@ class ProvenanceContext:
 
     def contains(self, token: str) -> bool:
         return any(token in event.result for event in self.tool_events)
+
+
+def ledger_of(wrapper: RunContextWrapper[Any], create: bool = False) -> ProvenanceContext | None:
+    if isinstance(wrapper.context, ProvenanceContext):
+        return wrapper.context
+    if wrapper.context is None and create:
+        wrapper.context = ProvenanceContext()
+        return wrapper.context
+    return None
+
+
+class ProvenanceHooks(RunHooks[Any]):
+    async def on_tool_end(
+        self,
+        context: RunContextWrapper[Any],
+        agent: Agent[Any],
+        tool: Tool,
+        result: Any,
+    ) -> None:
+        ledger = ledger_of(context, create=True)
+        if ledger is None:
+            logger.warning(
+                "provenance ledger unavailable: run context is %s, not ProvenanceContext",
+                type(context.context).__name__,
+            )
+            return
+        ledger.record(tool.name, result)
