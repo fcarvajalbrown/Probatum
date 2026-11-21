@@ -15,6 +15,11 @@ from tests.fake_model import FakeModel
 LONG_DUMP = "A" * 7000 + "HTB{inside_the_truncated_middle}" + "B" * 7000
 
 
+@pytest.fixture(autouse=True)
+def gate_on(monkeypatch):
+    monkeypatch.setenv("CAI_PROVENANCE_GATE", "true")
+
+
 def test_record_assigns_order_and_keeps_result_untruncated():
     ledger = ProvenanceContext()
     long_result = "x" * 20000 + "HTB{deep_in_the_dump}"
@@ -179,22 +184,40 @@ def test_match_path_contains_no_llm():
     assert imported.isdisjoint({"openai", "litellm", "anthropic", "ollama"})
     assert "Runner" not in inspect.getsource(provenance)
     gate_names = set(provenance_guardrail.guardrail_function.__code__.co_names)
-    assert gate_names <= {"judge", "ledger_of", "log_verdict", "GuardrailFunctionOutput", "as_info", "tripwire"}
+    assert gate_names <= {
+        "provenance_gate_enabled",
+        "judge",
+        "ledger_of",
+        "log_verdict",
+        "GuardrailFunctionOutput",
+        "as_info",
+        "tripwire",
+    }
 
 
 @pytest.mark.parametrize(
-    "guardrails, gate, expected_output",
+    "guardrails, expected_output",
     [
-        ("false", "false", []),
-        ("false", "true", ["provenance_gate"]),
-        ("true", "false", ["command_execution_guard"]),
-        ("true", "true", ["command_execution_guard", "provenance_gate"]),
+        ("false", ["provenance_gate"]),
+        ("true", ["command_execution_guard", "provenance_gate"]),
     ],
 )
-def test_toggle_controls_provenance_gate_independently(monkeypatch, guardrails, gate, expected_output):
+def test_provenance_gate_is_always_attached_independently_of_guardrails(
+    monkeypatch, guardrails, expected_output
+):
     from cai.agents.guardrails import get_security_guardrails
 
     monkeypatch.setenv("CAI_GUARDRAILS", guardrails)
-    monkeypatch.setenv("CAI_PROVENANCE_GATE", gate)
+    monkeypatch.delenv("CAI_PROVENANCE_GATE", raising=False)
     _, output_guardrails = get_security_guardrails()
     assert [g.get_name() for g in output_guardrails] == expected_output
+
+
+@pytest.mark.asyncio
+async def test_disabled_gate_passes_unbacked_flag_without_a_ledger(monkeypatch):
+    from cai.agents.guardrails import provenance_guardrail
+
+    monkeypatch.setenv("CAI_PROVENANCE_GATE", "false")
+    result = await provenance_guardrail.run(RunContextWrapper(context=None), Agent(name="t"), "HTB{x}")
+    assert not result.output.tripwire_triggered
+    assert result.output.output_info["verdict"] == "disabled"

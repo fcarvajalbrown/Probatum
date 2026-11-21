@@ -63,6 +63,63 @@ class ProvenanceHooks(RunHooks[Any]):
         ledger.record(tool.name, result)
 
 
+class CompositeRunHooks(RunHooks[Any]):
+    def __init__(self, *hooks: RunHooks[Any]) -> None:
+        self.hooks = hooks
+
+    async def on_agent_start(self, context: RunContextWrapper[Any], agent: Agent[Any]) -> None:
+        for hook in self.hooks:
+            await hook.on_agent_start(context, agent)
+
+    async def on_agent_end(
+        self, context: RunContextWrapper[Any], agent: Agent[Any], output: Any
+    ) -> None:
+        for hook in self.hooks:
+            await hook.on_agent_end(context, agent, output)
+
+    async def on_handoff(
+        self, context: RunContextWrapper[Any], from_agent: Agent[Any], to_agent: Agent[Any]
+    ) -> None:
+        for hook in self.hooks:
+            await hook.on_handoff(context, from_agent, to_agent)
+
+    async def on_tool_start(
+        self, context: RunContextWrapper[Any], agent: Agent[Any], tool: Tool
+    ) -> None:
+        for hook in self.hooks:
+            await hook.on_tool_start(context, agent, tool)
+
+    async def on_tool_end(
+        self, context: RunContextWrapper[Any], agent: Agent[Any], tool: Tool, result: Any
+    ) -> None:
+        for hook in self.hooks:
+            await hook.on_tool_end(context, agent, tool, result)
+
+
+def gate_enabled() -> bool:
+    return os.getenv("CAI_PROVENANCE_GATE", "false").strip().lower() in ("true", "1", "yes", "on")
+
+
+def has_provenance_hooks(hooks: RunHooks[Any] | None) -> bool:
+    if isinstance(hooks, ProvenanceHooks):
+        return True
+    if isinstance(hooks, CompositeRunHooks):
+        return any(has_provenance_hooks(hook) for hook in hooks.hooks)
+    return False
+
+
+def provenance_run_kwargs(hooks: RunHooks[Any] | None = None) -> dict[str, Any]:
+    if not gate_enabled():
+        return {"hooks": hooks} if hooks is not None else {}
+    if hooks is None:
+        merged: RunHooks[Any] = ProvenanceHooks()
+    elif has_provenance_hooks(hooks):
+        merged = hooks
+    else:
+        merged = CompositeRunHooks(hooks, ProvenanceHooks())
+    return {"hooks": merged, "context": ProvenanceContext()}
+
+
 @dataclass
 class ProvenanceVerdict:
     verdict: str

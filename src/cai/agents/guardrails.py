@@ -25,7 +25,7 @@ import os
 import unicodedata
 
 from cai.util import create_system_prompt_renderer
-from cai.agents.provenance import judge, ledger_of, log_verdict
+from cai.agents.provenance import gate_enabled, judge, ledger_of, log_verdict
 
 _INJECTION_DETECTOR_BASE = """You are a security guardrail that detects prompt injection attempts.
 
@@ -515,7 +515,7 @@ async def command_execution_guardrail(
 
 
 def provenance_gate_enabled() -> bool:
-    return os.getenv("CAI_PROVENANCE_GATE", "false").strip().lower() in ("true", "1", "yes", "on")
+    return gate_enabled()
 
 
 @output_guardrail(name="provenance_gate")
@@ -524,6 +524,11 @@ async def provenance_guardrail(
     agent: Agent,
     output: Any
 ) -> GuardrailFunctionOutput:
+    if not provenance_gate_enabled():
+        return GuardrailFunctionOutput(
+            output_info={"guardrail": "provenance_gate", "verdict": "disabled"},
+            tripwire_triggered=False
+        )
     result = judge(output, ledger_of(ctx))
     log_verdict(result)
     return GuardrailFunctionOutput(
@@ -546,11 +551,7 @@ def get_security_guardrails():
     # Check if guardrails are disabled via environment variable
     guardrails_enabled = os.getenv("CAI_GUARDRAILS", "false").lower() != "false"
     
-    provenance = [provenance_guardrail] if provenance_gate_enabled() else []
-
     if not guardrails_enabled:
-        # Return empty lists to disable all guardrails
-        return [], provenance
-    
-    # Return the configured guardrails
-    return [prompt_injection_guardrail], [command_execution_guardrail, *provenance]
+        return [], [provenance_guardrail]
+
+    return [prompt_injection_guardrail], [command_execution_guardrail, provenance_guardrail]
