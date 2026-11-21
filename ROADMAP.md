@@ -7,7 +7,7 @@ finished work.
 ## Open items
 
 - Phase 0.3 — Install Ollama, pull `qwen2.5-coder:7b`, route via LiteLLM. Status: Not Started.
-- Phase 1.1 — Provenance gate core. Status: Not Started.
+- Phase 1.2 — Wire hook, ledger and gate into the red-team run path. Status: Not Started.
 - Phase 2.1 — Reproducible Cybench before/after harness. Status: Not Started.
 - Phase 3.1 — Measurement runs, both backends. Status: Not Started.
 - Phase 4.1 — Preprint writeup. Status: Not Started.
@@ -36,8 +36,20 @@ finished work.
 
 ## Phase 1 — Trace-provenance gate (release 0.2.0)
 
-- 1.1 Provenance gate core: accept a finding only if its proof token appears in real tool output
-  after the exploit step; reject model-text-only claims. Log every verdict with trace evidence.
+- 1.1 Provenance gate core: accept a finding only if its proof token appears in real tool output;
+  reject model-text-only claims; log every verdict with trace evidence. Status: Done.
+  `src/cai/agents/provenance.py` holds the `ProvenanceContext` ledger, the `ProvenanceHooks.on_tool_end`
+  capture and the deterministic `judge`; `provenance_guardrail` lives in `src/cai/agents/guardrails.py`.
+  Toggles: `CAI_PROVENANCE_GATE` (default off, independent of `CAI_GUARDRAILS`), `CAI_PROVENANCE_MODE`
+  (`reject` default, `annotate` keeps the output), `CAI_PROVENANCE_FLAG_PATTERN` (default
+  `[A-Za-z0-9_]{2,40}\{[^{}\s]{1,400}\}`). Every claimed flag must be backed; a run without a ledger
+  fails closed. Verdicts log to the `cai.provenance` logger (warning with ledger snapshot on unverified,
+  info on verified). Done check: `tests/agents/test_provenance_gate.py`, 17 tests, end to end through
+  `Runner.run`, including a static check that the match path imports no LLM client. Finding: only
+  `raw_item["output"]` (what the model reads back) is truncated, not `ToolCallOutputItem.output`; see
+  `docs/research/trace-shape.md`. Open for 1.2: agents call `get_security_guardrails()` at import, so the
+  env vars must be set before import, and no run path yet passes `ProvenanceHooks()` and a
+  `ProvenanceContext` to `Runner.run`, which is why the gate defaults off.
 - 1.2 Wire the gate into the red-team / flag-discrimination path per ADR-0001.
 - 1.3 Oracle cross-check against CAIBench `ctf.py` ground-truth flags: measure the gate's own
   precision and recall on accept/reject.
