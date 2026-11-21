@@ -19,10 +19,16 @@ A run produces a list of `RunItem` (`src/cai/sdk/agents/items.py`). The relevant
 
 ## Truncation caveat
 
-`ToolCallOutputItem.output` is not the raw result. `_run_impl.py` builds it with
-`truncate_output(result, max_length=10000)` (`_run_impl.py:206`). A proof token past 10000 chars in a
-long tool output is cut from `.output`. The gate must not rely on `ToolCallOutputItem.output` for
-matching, or it will reject real findings whose proof sits in a long dump.
+What the model reads back is truncated; `ToolCallOutputItem.output` is not. For function tools,
+`_run_impl.py:888-893` builds `ToolCallOutputItem(output=result, raw_item=tool_call_output_item(call,
+truncate_output(result)))`: `.output` keeps the full result, while `raw_item["output"]`, the copy sent
+to the model, goes through `truncate_output(max_length=10000)` (`_run_impl.py:206`). Past 10000 chars
+that keeps the first 5000 and the last 5000 and drops the middle. Verified by
+`tests/agents/test_provenance_gate.py`, which runs a tool returning a flag in the middle of a 14000-char
+dump: the flag survives in the ledger and is absent from `raw_item["output"]`.
+
+The gate still cannot use `new_items`, because the output guardrail does not receive them (see below),
+so it reads the ledger. The match source must never be `raw_item["output"]`.
 
 ## Capture point: `on_tool_end`
 
