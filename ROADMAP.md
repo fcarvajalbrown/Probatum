@@ -6,10 +6,7 @@ finished work.
 
 ## Open items
 
-- Phase 0.2 — Get forked CAI running end to end. Status: Blocked. Native Windows fails on
-  `termios` (Unix-only), imported transitively even by `cli_headless.py` via
-  `cai.repl.commands._parallel_monolith`; Docker-based Cybench needs Linux regardless. Target
-  environment is WSL `kali-linux` (pending Felipe's confirmation).
+- Phase 0.3 — Install Ollama, pull `qwen2.5-coder:7b`, route via LiteLLM. Status: Not Started.
 - Phase 1.1 — Provenance gate core. Status: Not Started.
 - Phase 2.1 — Reproducible Cybench before/after harness. Status: Not Started.
 - Phase 3.1 — Measurement runs, both backends. Status: Not Started.
@@ -19,9 +16,15 @@ finished work.
 
 - 0.1 ADR-0001 gate placement: new guardrail module. Status: Done. Detail:
   `docs/adr/0001-provenance-gate-placement.md`.
-- 0.2 Install deps (`uv`), set `.env` with CVP-approved `ANTHROPIC_API_KEY`, confirm CAI CLI starts.
-- 0.3 Install Ollama, pull `qwen2.5-coder:7b` to `D:` (`OLLAMA_MODELS` on `D:`), route via LiteLLM.
-- 0.4 Rename repo and package identity to Probatum (ASCII), keep CAI attribution and licence intact.
+- 0.2 Environment and deps. Status: Done. Runs in WSL `kali-linux` (native Windows dead-ends on
+  `termios`); Python pinned to 3.12 (3.14 breaks pinned C-extensions); unused `pynput`/`evdev`
+  dropped. Clean `uv sync` and `import cai` verified. Open: set `ANTHROPIC_API_KEY` in the kali
+  `.env` (Windows copy had an encoding issue); kali has no git push auth, so commits go from the
+  Windows checkout.
+- 0.3 Install Ollama, pull `qwen2.5-coder:7b` (weights on the WSL ext4 home, 830 GB free; not `D:`,
+  20 GB), route via LiteLLM. Status: Not Started.
+- 0.4 Repo renamed to Probatum; README, description, 7 topics, default branch set. Status: Done.
+  Open: package identity in `pyproject.toml` still `cai-framework`.
 - 0.5 Map and document the exact tool-call trace shape in `cai.sdk.agents`. Detail:
   `docs/research/`.
 - Release gate 0.1.0: CAI runs on both backends; trace shape documented; ADR-0001 Accepted.
