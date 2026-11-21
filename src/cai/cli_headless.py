@@ -1486,6 +1486,8 @@ def _run_streamed(agent, conversation_input, console, force_until_flag, ctf_glob
                 except Exception:
                     pass
             raise
+        except OutputGuardrailTripwireTriggered:
+            raise
         except Exception as e:
             if stream_iterator is not None:
                 try:
