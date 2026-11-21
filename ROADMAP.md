@@ -42,7 +42,7 @@ finished work.
   capture and the deterministic `judge`; `provenance_guardrail` lives in `src/cai/agents/guardrails.py`.
   Toggles: `CAI_PROVENANCE_GATE` (default off, independent of `CAI_GUARDRAILS`), `CAI_PROVENANCE_MODE`
   (`reject` default, `annotate` keeps the output), `CAI_PROVENANCE_FLAG_PATTERN` (default
-  `[A-Za-z0-9_]{2,40}\{[^{}\s]{1,400}\}`). Every claimed flag must be backed; a run without a ledger
+  `\b[A-Za-z0-9_]{2,40}\{[^{}\s]{1,400}\}`). Every claimed flag must be backed; a run without a ledger
   fails closed. Verdicts log to the `cai.provenance` logger (warning with ledger snapshot on unverified,
   info on verified). Done check: `tests/agents/test_provenance_gate.py`, 17 tests, end to end through
   `Runner.run`, including a static check that the match path imports no LLM client. Finding: only
