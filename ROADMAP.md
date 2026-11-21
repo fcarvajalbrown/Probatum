@@ -6,7 +6,10 @@ finished work.
 
 ## Open items
 
-- Phase 0.2 — Get forked CAI running end to end on this machine. Status: Not Started.
+- Phase 0.2 — Get forked CAI running end to end. Status: Blocked. Native Windows fails on
+  `termios` (Unix-only), imported transitively even by `cli_headless.py` via
+  `cai.repl.commands._parallel_monolith`; Docker-based Cybench needs Linux regardless. Target
+  environment is WSL `kali-linux` (pending Felipe's confirmation).
 - Phase 1.1 — Provenance gate core. Status: Not Started.
 - Phase 2.1 — Reproducible Cybench before/after harness. Status: Not Started.
 - Phase 3.1 — Measurement runs, both backends. Status: Not Started.
