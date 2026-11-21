@@ -6,7 +6,6 @@ finished work.
 
 ## Open items
 
-- Phase 0.1 — ADR-0001: where the provenance gate lives. Status: Blocked (needs Felipe).
 - Phase 0.2 — Get forked CAI running end to end on this machine. Status: Not Started.
 - Phase 1.1 — Provenance gate core. Status: Not Started.
 - Phase 2.1 — Reproducible Cybench before/after harness. Status: Not Started.
@@ -15,8 +14,8 @@ finished work.
 
 ## Phase 0 — Baseline and decisions (release 0.1.0)
 
-- 0.1 ADR-0001 gate placement: SDK interceptor vs `flag_discriminator` wrapper vs new guardrail.
-  Blocked on Felipe. Detail: `docs/adr/README.md`.
+- 0.1 ADR-0001 gate placement: new guardrail module. Status: Done. Detail:
+  `docs/adr/0001-provenance-gate-placement.md`.
 - 0.2 Install deps (`uv`), set `.env` with CVP-approved `ANTHROPIC_API_KEY`, confirm CAI CLI starts.
 - 0.3 Install Ollama, pull `qwen2.5-coder:7b` to `D:` (`OLLAMA_MODELS` on `D:`), route via LiteLLM.
 - 0.4 Rename repo and package identity to Probatum (ASCII), keep CAI attribution and licence intact.
